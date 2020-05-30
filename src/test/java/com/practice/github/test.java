@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static io.restassured.RestAssured.*;
@@ -193,12 +194,8 @@ public void test6() {
             get("orgs/cucumber/repos");
 
     List<String> listOfNames = response.jsonPath().get("full_name");
-    System.out.println("Before " + listOfNames);
+    assertEquals(listOfNames.stream().sorted().collect(Collectors.toList()), listOfNames);
 
-    List<String> newList = new ArrayList<>(listOfNames);
-    Collections.sort(newList);
-    System.out.println("After " + newList);
-    assertEquals(listOfNames, newList);
 }
 
 /*
@@ -211,18 +208,13 @@ Path param org with value cucumber
 @DisplayName("Descending order by full_name sort")
 public void test7(){
 
-    Response response=given().accept(ContentType.JSON).queryParam("sort","full_name").queryParam("direction","desc").when().
+    Response response=given().queryParam("sort","full_name").
+            queryParam("direction","desc").when().
             get("orgs/cucumber/repos");
 
-    List<String>listOfNames = response.jsonPath().get("full_name");
-    System.out.println("Before " + listOfNames);
+    List<String>listOfNames = response.then().extract().jsonPath().getList("full_name");
 
-
-    List<String> newList = new ArrayList<>(listOfNames);
-    Collections.reverse(newList);
-    System.out.println("After " + newList);
-    assertEquals(listOfNames, newList);
-
+    assertEquals(listOfNames.stream().sorted().collect(Collectors.toList()),listOfNames);
 }
 
 
@@ -233,15 +225,10 @@ public void test7(){
     @Test
     @DisplayName("Default sort")
     public void test8(){
-    Response response=given().baseUri(basePath).accept(ContentType.JSON).when().
+    Response response=given().accept(ContentType.JSON).when().
             get("orgs/cucumber/repos");
-    List<String>listOfNames = response.then().extract().jsonPath().getList("created_at");
-    System.out.println("Before " + listOfNames);
+    List<String>created_at = response.then().extract().jsonPath().getList("created_at");
 
-    List<String> newList = new ArrayList<>(listOfNames);
-    System.out.println("After " + newList);
-    Collections.sort(newList);
-    assertEquals(newList,listOfNames);
-
+    assertEquals(created_at.stream().sorted().collect(Collectors.toList()),created_at);
 }
 }

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -16,8 +18,8 @@ import static org.hamcrest.Matchers.*;
 public class HaryyPotter {
 
     @BeforeAll
-    public static void setup(){
-        baseURI="https://www.potterapi.com/v1";
+    public static void setup() {
+        baseURI = "https://www.potterapi.com/v1";
     }
 
     /*
@@ -135,17 +137,17 @@ public class HaryyPotter {
         response.then().assertThat().
                 statusCode(200).contentType(ContentType.JSON);
         List<Map<Object, Object>> charactersList = response.body().jsonPath().get();
-        List<String > names = response.body().jsonPath().get("name");
+        List<String> names = response.body().jsonPath().get("name");
         Random random = new Random();
         int x = random.nextInt(names.size());
         Response response1 = given().accept(ContentType.JSON).queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
-                queryParam("name",names.get(x)).
+                queryParam("name", names.get(x)).
                 when().get("/characters");
 
         for (int i = 0; i < charactersList.size(); i++) {
-            if(charactersList.get(i).containsValue(names.get(x))){
+            if (charactersList.get(i).containsValue(names.get(x))) {
                 System.out.println(charactersList.get(i));
-                Map<Object, Object> s =charactersList.get(i);
+                Map<Object, Object> s = charactersList.get(i);
                 System.out.println(s);
                 assertTrue(charactersList.contains(s));
             }
@@ -163,19 +165,18 @@ public class HaryyPotter {
     @Test
     @DisplayName("Verify name search")
     public void name() {
-       List<Object > arr =Arrays.asList("Harry Potter", "Marry Potter",
-               "");
+        List<Object> arr = Arrays.asList("Harry Potter", "Marry Potter",
+                "");
         Response response = given().accept(ContentType.JSON).queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
-                queryParam("name","Harry Potter").when().get("/characters");
+                queryParam("name", "Harry Potter").when().get("/characters");
 
         response.then().assertThat().
-                statusCode(200).contentType(ContentType.JSON).assertThat().body("name",contains(arr.get(0)));
-
+                statusCode(200).contentType(ContentType.JSON).assertThat().body("name", contains(arr.get(0)));
 
 
         given().accept(ContentType.JSON).queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
-                queryParam("name","Marry Potter").when().get("/characters").then().assertThat().
-                statusCode(200).contentType(ContentType.JSON).body("",is(empty()));
+                queryParam("name", "Marry Potter").when().get("/characters").then().assertThat().
+                statusCode(200).contentType(ContentType.JSON).body("", is(empty()));
 
     }
 
@@ -190,30 +191,99 @@ public class HaryyPotter {
     @Test
     @DisplayName("Verify house members")
     public void members() {
-        Response response = given().accept(ContentType.JSON).
-                                queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
-                            when().get("/houses");
+        Response response = given().header("Accept", "application/json").
+                queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
+                when().get("/houses");
 
         response.then().assertThat().
                 statusCode(200).contentType(ContentType.JSON);
 
-        List<Map<String,Object>> members = response.jsonPath().get("");
-        int id = 0;
-        for (int i = 0; i < members.size(); i++) {
-            if(members.get(i).get("name").toString().equals("Gryffindor")){
-               id= Integer.parseInt(members.get(i).get("id").toString());
-                System.out.println(id);
-            }
-        }
+        List<Map<String, Object>> characters = response.jsonPath().get("");
+        String id1 = response.body().jsonPath().getString("find{it.name == 'Gryffindor'}._id");
+        System.out.println("id1 = " + id1);
+
+        List<List<String>> members1 = response.body().jsonPath().getList("members");
+
 
         Response response2 = given().accept(ContentType.JSON).
                 queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
-                when().get("/houses/{id}",id);
+                when().get("/houses/{id}", id1);
+        response2.then().contentType(ContentType.JSON);
 
-        System.out.println(response2.body().prettyPrint());
+        List<List<Map<String, Object>>> members2 = response2.body().jsonPath().getList("members");
 
+        List<String> flatMembers1 = members1.stream().flatMap(List::stream).collect(Collectors.toList());
+        System.out.println(members1);
+        System.out.println(flatMembers1);
+        System.out.println(members2);
+
+        members2.get(0).forEach(map -> assertTrue(flatMembers1.contains(map.get("_id"))));
 
     }
 
+    /*
+    1.Send a get request to /houses/:id. Request includes :
+    •Header Accept with value application/json
+    •Query param key with value {{apiKey}}
+    •Path param id with value 5a05e2b252f721a3cf2ea33f
+    2.Capture the ids of all members
+    3.Send a get request to /characters. Request includes :•Header Accept with value application/json•Query param key with value {{apiKey}}•Query param house with value Gryffindor
+    4.Verify that response contains the same member ids from step 2
+    */
+    @Test
+    @DisplayName("Verify house members again")
+    public void membersAgain() {
+        Response response = given().header("Accept", "application/json").
+                queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
+                queryParam("id", "5a05e2b252f721a3cf2ea33f").
+                when().get("/houses");
+        response.then().assertThat().
+                statusCode(200).contentType(ContentType.JSON);
 
+
+        List<List<Map<String, Object>>> idList = response.body().jsonPath().getList("_id");
+        System.out.println("idList = " + idList);
+
+        Response response2 = given().header("Accept", "application/json").
+                queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
+                queryParam("house", "Gryffindor").
+                when().get("/characters");
+
+        List<List<Map<String, Object>>> idList2 = response.body().jsonPath().getList("_id");
+        System.out.println("idList2 = " + idList2);
+        response2.then().assertThat().
+                statusCode(200).contentType(ContentType.JSON);
+        assertEquals(idList2, idList);
+    }
+
+
+    /*
+    1.Send a get request to /houses. Request includes :
+    •Header Accept with value application/json•Query param key with value {{apiKey}}
+    2.Verify status code 200, content type application/json; charset=utf-8
+    3.Verify that Gryffindor house has the most members
+     */
+    @Test
+    @DisplayName("Verify house with most members")
+    public void mostMembers() {
+        Response response = given().header("Accept", "application/json").
+                queryParam("key", "$2a$10$RwapZMshqeMSubQ4vguv.eC2xR/ptN5bkRZZ.tDXkLWa6lG5hZLee").
+                when().get("/houses");
+
+        response.then().assertThat().
+                statusCode(200).contentType(ContentType.JSON);
+
+      //  String[] houses = {"Gryffindor", "Ravenclaw", "Slytherin", "Hufflepuff"};
+        List<String> GryffindorMembers = response.body().jsonPath().getList("find{it.name == 'Gryffindor'}.members");
+        List<String> RavenclawMembers = response.body().jsonPath().getList("find{it.name == 'Ravenclaw'}.members");
+        List<String> SlytherinMembers = response.body().jsonPath().getList("find{it.name == 'Slytherin'}.members");
+        List<String> HufflepuffMembers = response.body().jsonPath().getList("find{it.name == 'Hufflepuff'}.members");
+
+        List<Integer> houseCounts = new ArrayList<>(Arrays.asList(GryffindorMembers.size(),RavenclawMembers.size(),SlytherinMembers.size(),HufflepuffMembers.size()));
+        System.out.println(houseCounts);
+        Collections.sort(houseCounts);
+        System.out.println(houseCounts);
+        assertEquals(GryffindorMembers.size(),houseCounts.get(houseCounts.size()-1));
+
+    }
 }
