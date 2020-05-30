@@ -213,9 +213,9 @@ public class HaryyPotter {
         List<List<Map<String, Object>>> members2 = response2.body().jsonPath().getList("members");
 
         List<String> flatMembers1 = members1.stream().flatMap(List::stream).collect(Collectors.toList());
-        System.out.println("members1 " + members1);
-        System.out.println("flatMembers1 " + flatMembers1);
-        System.out.println("memebers2 " + members2);
+        System.out.println("members1 = " + members1);
+        System.out.println("flatMembers1 = " + flatMembers1);
+        System.out.println("members2 = " + members2);
 
         members2.get(0).forEach(map -> assertTrue(flatMembers1.contains(map.get("_id"))));
 
