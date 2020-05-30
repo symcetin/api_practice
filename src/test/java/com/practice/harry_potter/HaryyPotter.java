@@ -202,7 +202,7 @@ public class HaryyPotter {
         String id1 = response.body().jsonPath().getString("find{it.name == 'Gryffindor'}._id");
         System.out.println("id1 = " + id1);
 
-        List<List<String>> members1 = response.body().jsonPath().getList("members");
+        List<List<String>> members1 = response.body().jsonPath().getList("findAll{it.name == 'Gryffindor'}.members");
 
 
         Response response2 = given().accept(ContentType.JSON).
@@ -213,9 +213,9 @@ public class HaryyPotter {
         List<List<Map<String, Object>>> members2 = response2.body().jsonPath().getList("members");
 
         List<String> flatMembers1 = members1.stream().flatMap(List::stream).collect(Collectors.toList());
-        System.out.println(members1);
-        System.out.println(flatMembers1);
-        System.out.println(members2);
+        System.out.println("members1 " + members1);
+        System.out.println("flatMembers1 " + flatMembers1);
+        System.out.println("memebers2 " + members2);
 
         members2.get(0).forEach(map -> assertTrue(flatMembers1.contains(map.get("_id"))));
 
